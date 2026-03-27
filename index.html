@@ -611,3 +611,653 @@ window.addEventListener('load', async () => {
 </script>
 </body>
 </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modified Methods</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink:      #0F1724;
+    --paper:    #F5F3EE;
+    --grid:     #C9D1D8;
+    --fog:      #E8EDF0;
+    --signal:   #F26A2E;
+    --cyan:     #1EA7A1;
+    --amber:    #D9A441;
+    --charcoal: #1D232B;
+    --tile-bg:  #111b28;
+    --tile-top: #0b1520;
+    --tile-txt: #EDE9E2;
+    --tile-gap: #07101a;
+    --tile-w:    28px;
+    --tile-h:    44px;
+    --tile-font: 20px;
+    --tile-persp: 180px;
+  }
+
+  @media (max-width: 600px) {
+    :root {
+      --tile-w:    16px;
+      --tile-h:    26px;
+      --tile-font: 11px;
+      --tile-persp: 80px;
+    }
+    .page { gap: 24px; padding: 36px 16px 44px; }
+    .cta-sub { font-size: 9px; letter-spacing: 0.08em; }
+  }
+
+  html, body {
+    width: 100%;
+    min-height: 100vh;
+    background: var(--paper);
+    font-family: 'IBM Plex Mono', monospace;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(var(--grid) 0, var(--grid) 0.5px, transparent 0.5px, transparent 40px),
+      repeating-linear-gradient(90deg, var(--grid) 0, var(--grid) 0.5px, transparent 0.5px, transparent 40px);
+    opacity: 0.35;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .page {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px 56px;
+    gap: 36px;
+  }
+
+  /* ── LOGO ── */
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .logo-words {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+  .logo-words em {
+    display: block;
+    font-style: normal;
+    font-weight: 400;
+    color: var(--signal);
+  }
+
+  /* ── BOARD ── */
+  .board-wrap {
+    width: 100%;
+    max-width: 820px;
+    background: #07101a;
+    border-radius: 8px;
+    border: 1px solid #152030;
+    overflow: hidden;
+    box-shadow: 0 48px 96px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.03);
+  }
+
+  .board-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 14px;
+    background: #060e17;
+    border-bottom: 1px solid #0f1e2c;
+  }
+
+  .board-label {
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #2a4058;
+  }
+
+  .live-dot {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #2a4058;
+  }
+  .live-dot::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--cyan);
+    opacity: 0.7;
+    animation: blink 2s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:0.7} 50%{opacity:0.2} }
+
+  .board-rows {
+    padding: 10px 10px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .board-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .rn {
+    font-size: 9px;
+    color: #1e3248;
+    min-width: 14px;
+    text-align: right;
+    flex-shrink: 0;
+    letter-spacing: 0.04em;
+  }
+
+  .cell {
+    display: flex;
+    gap: 2px;
+  }
+
+  /* ── FLAP TILE ── */
+  .flap {
+    position: relative;
+    width: var(--tile-w);
+    height: var(--tile-h);
+    flex-shrink: 0;
+    perspective: var(--tile-persp);
+  }
+
+  .flap-top {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 50%;
+    background: var(--tile-top);
+    border-radius: 3px 3px 0 0;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    transition: background 0.15s;
+  }
+
+  .flap-bot {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 50%;
+    background: var(--tile-bg);
+    border-radius: 0 0 3px 3px;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    transition: background 0.15s;
+  }
+
+  .flap-top span {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: var(--tile-font);
+    font-weight: 500;
+    color: var(--tile-txt);
+    line-height: 1;
+    transform: translateY(50%);
+    display: block;
+    user-select: none;
+    transition: color 0.15s;
+  }
+
+  .flap-bot span {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: var(--tile-font);
+    font-weight: 500;
+    color: var(--tile-txt);
+    line-height: 1;
+    transform: translateY(-50%);
+    display: block;
+    user-select: none;
+    transition: color 0.15s;
+  }
+
+  /* Orange flash state */
+  .flap.orange .flap-top { background: var(--signal); }
+  .flap.orange .flap-bot { background: #d45a22; }
+  .flap.orange .flap-top span { color: #7a2800; }
+  .flap.orange .flap-bot span { color: #7a2800; }
+
+  /* The flipping card */
+  .flap-card {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 50%;
+    background: var(--tile-top);
+    border-radius: 3px 3px 0 0;
+    transform-origin: bottom center;
+    backface-visibility: hidden;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 10;
+    transition: background 0.15s;
+  }
+
+  .flap-card span {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: var(--tile-font);
+    font-weight: 500;
+    color: var(--tile-txt);
+    line-height: 1;
+    transform: translateY(50%);
+    display: block;
+    user-select: none;
+    transition: color 0.15s;
+  }
+
+  .flap.orange .flap-card { background: var(--signal); }
+  .flap.orange .flap-card span { color: #7a2800; }
+
+  .flap-card.flip {
+    animation: cardFlip 0.1s linear forwards;
+  }
+
+  @keyframes cardFlip {
+    from { transform: rotateX(0deg); }
+    to   { transform: rotateX(-90deg); }
+  }
+
+  /* Center seam */
+  .flap::after {
+    content: '';
+    position: absolute;
+    top: calc(50% - 1px);
+    left: 0; right: 0;
+    height: 2px;
+    background: var(--tile-gap);
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  .board-bot-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 14px;
+    background: #060e17;
+    border-top: 1px solid #0f1e2c;
+  }
+
+  .clock {
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    color: #2a4058;
+  }
+  .clock-time { color: var(--amber); font-weight: 500; }
+
+  .row-div {
+    height: 1px;
+    background: #0d1825;
+  }
+
+  /* ── CTA ── */
+  .cta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    text-align: center;
+  }
+
+  .cta-line {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(20px, 3.5vw, 30px);
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+  .cta-line em { font-style: normal; color: var(--signal); }
+
+  .cta-sub {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #7a8fa0;
+  }
+
+  .cta-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+    background: var(--paper);
+    color: var(--ink);
+    border: none;
+    border-radius: 4px;
+    padding: 10px 26px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: background 0.15s;
+  }
+  .cta-btn:hover { background: var(--fog); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Logo -->
+  <div class="logo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 80" width="24" height="34">
+      <rect x="0"  y="66" width="8" height="8" fill="#F5F3EE"/>
+      <rect x="3"  y="57" width="8" height="8" fill="#F5F3EE"/>
+      <rect x="6"  y="48" width="8" height="8" fill="#F5F3EE"/>
+      <rect x="9"  y="39" width="8" height="8" fill="#F5F3EE"/>
+      <rect x="12" y="30" width="8" height="8" fill="#F5F3EE"/>
+      <rect x="15" y="21" width="8" height="8" fill="#F5F3EE"/>
+      <rect x="18" y="12" width="8" height="8" fill="#F5F3EE"/>
+      <line x1="38" y1="74" x2="54" y2="6" stroke="#F26A2E" stroke-width="6" stroke-linecap="round"/>
+    </svg>
+    <div class="logo-words">Modified<em>Methods</em></div>
+  </div>
+
+  <!-- Board -->
+  <div class="board-wrap">
+    <div class="board-top-bar">
+      <span class="board-label">Modified Methods · Departures</span>
+      <span class="live-dot">Live</span>
+    </div>
+
+    <div class="board-rows" id="board"></div>
+
+    <div class="board-bot-bar">
+      <span class="clock">modifiedmethods.com</span>
+      <span class="clock clock-time" id="clock">--:--:--</span>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta">
+    <div class="cta-line">Complex is real.<br><em>Complicated</em> is often optional.</div>
+    <div class="cta-sub">Strategy &amp; Innovation Consulting · hello@modifiedmethods.com</div>
+    <a href="mailto:hello@modifiedmethods.com" class="cta-btn">Start with an email →</a>
+  </div>
+
+</div>
+<script>
+const CHARS    = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789·- ';
+const MOBILE   = window.innerWidth <= 600;
+const LL       = MOBILE ? 16 : 28; // tiles per row
+const NUM_ROWS = 2;
+
+// ─── BOARD STATES ───────────────────────────────────────────
+// State 4 is special — handled separately (orange reset → CTA line)
+const STATES = MOBILE ? [
+  // 1 — primary brand line
+  [
+    'COMPLEX IS REAL',
+    'IT IS OPTIONAL',
+  ],
+  // 2
+  [
+    'COMPLEX IS REAL',
+    'MODIFY THINKING',
+  ],
+  // 3
+  [
+    'COMPLEX IS REAL',
+    'FIND NEW METHODS',
+  ],
+  // 4 — orange reset, resolves to CTA
+  [
+    '                ', // blank — board goes orange
+    'START WITH EMAIL',
+  ],
+] : [
+  // 1 — primary brand line
+  [
+    'COMPLEX IS REAL',
+    'COMPLICATED IS OPTIONAL',
+  ],
+  // 2
+  [
+    'COMPLEX IS REAL',
+    'MODIFY YOUR THINKING',
+  ],
+  // 3
+  [
+    'COMPLEX IS REAL',
+    'FIND NEW METHODS',
+  ],
+  // 4 — orange reset, resolves to CTA
+  [
+    '                            ', // blank — board goes orange
+    'START WITH AN EMAIL',
+  ],
+];
+
+let currentState = 0;
+
+// ─── BUILD DOM ──────────────────────────────────────────────
+function buildBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+
+  for (let ri = 0; ri < NUM_ROWS; ri++) {
+    if (ri > 0) {
+      const div = document.createElement('div');
+      div.className = 'row-div';
+      board.appendChild(div);
+    }
+
+    const row = document.createElement('div');
+    row.className = 'board-row';
+
+    const rn = document.createElement('span');
+    rn.className = 'rn';
+    rn.textContent = String(ri + 1).padStart(2, '0');
+    row.appendChild(rn);
+
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.dataset.row = ri;
+
+    const blank = ''.padEnd(LL, ' ');
+    for (let i = 0; i < LL; i++) {
+      cell.appendChild(makeFlapEl(' '));
+    }
+    row.appendChild(cell);
+    board.appendChild(row);
+  }
+}
+
+function makeFlapEl(char) {
+  const wrap = document.createElement('div');
+  wrap.className = 'flap';
+
+  const top = document.createElement('div');
+  top.className = 'flap-top';
+  const ts = document.createElement('span');
+  ts.textContent = char;
+  top.appendChild(ts);
+
+  const bot = document.createElement('div');
+  bot.className = 'flap-bot';
+  const bs = document.createElement('span');
+  bs.textContent = char;
+  bot.appendChild(bs);
+
+  const card = document.createElement('div');
+  card.className = 'flap-card';
+  const cs = document.createElement('span');
+  cs.textContent = char;
+  card.appendChild(cs);
+
+  wrap.appendChild(top);
+  wrap.appendChild(bot);
+  wrap.appendChild(card);
+  return wrap;
+}
+
+// ─── FLIP ONE TILE ──────────────────────────────────────────
+function flipTo(flap, toChar, delay) {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      const topSpan  = flap.querySelector('.flap-top span');
+      const botSpan  = flap.querySelector('.flap-bot span');
+      const card     = flap.querySelector('.flap-card');
+      const cardSpan = card.querySelector('span');
+
+      cardSpan.textContent = topSpan.textContent;
+      card.classList.remove('flip');
+      void card.offsetWidth;
+      card.classList.add('flip');
+
+      setTimeout(() => { botSpan.textContent = toChar; }, 50);
+      setTimeout(() => {
+        topSpan.textContent = toChar;
+        cardSpan.textContent = toChar;
+        card.classList.remove('flip');
+        resolve();
+      }, 110);
+    }, delay);
+  });
+}
+
+// ─── SCRAMBLE CELL TO TARGET TEXT ───────────────────────────
+function scrambleCell(cell, targetLine, rowDelay) {
+  const flaps  = cell.querySelectorAll('.flap');
+  const padded = targetLine.padEnd(LL, ' ').substring(0, LL);
+  const promises = [];
+
+  flaps.forEach((flap, i) => {
+    const target  = padded[i];
+    const current = flap.querySelector('.flap-top span').textContent;
+    if (current === target) return;
+
+    const steps = Math.floor(Math.random() * 5) + 3;
+    for (let s = 0; s < steps; s++) {
+      const ch = (s === steps - 1)
+        ? target
+        : CHARS[Math.floor(Math.random() * CHARS.length)];
+      promises.push(flipTo(flap, ch, rowDelay + i * 22 + s * 72));
+    }
+  });
+
+  return Promise.all(promises);
+}
+
+// ─── ORANGE FLASH ───────────────────────────────────────────
+// All tiles wave to orange from left to right, then clear to black
+function orangeFlash() {
+  return new Promise(resolve => {
+    const allFlaps = [...document.querySelectorAll('.flap')];
+    const total    = allFlaps.length;
+
+    // Wave orange in — left to right
+    allFlaps.forEach((flap, i) => {
+      setTimeout(() => {
+        flap.classList.add('orange');
+        flap.querySelectorAll('span').forEach(s => s.textContent = '\u25A0'); // ■
+      }, i * 18);
+    });
+
+    // Hold orange, then clear to blank from left to right
+    const holdTime = total * 18 + 300;
+    allFlaps.forEach((flap, i) => {
+      setTimeout(() => {
+        flap.classList.remove('orange');
+        flap.querySelectorAll('span').forEach(s => s.textContent = ' ');
+      }, holdTime + i * 18);
+    });
+
+    // Resolve after clear is done
+    setTimeout(resolve, holdTime + total * 18 + 200);
+  });
+}
+
+// ─── SHOW REGULAR STATE ─────────────────────────────────────
+async function showState(stateIdx) {
+  const lines = STATES[stateIdx];
+  const cells = document.querySelectorAll('.cell');
+
+  cells.forEach((cell, ri) => {
+    const line = lines[ri] || '';
+    const delay = ri * 90;
+    setTimeout(() => scrambleCell(cell, line, 0), delay);
+  });
+}
+
+// ─── SHOW STATE 4 — orange reset then CTA line ──────────────
+async function showOrangeState() {
+  await orangeFlash();
+
+  // After flash — resolve to CTA line on row 2 only, row 1 stays blank
+  const cells = document.querySelectorAll('.cell');
+  const lines  = STATES[3]; // ['                    ', 'START WITH AN EMAIL']
+
+  cells.forEach((cell, ri) => {
+    const line = lines[ri] || '';
+    setTimeout(() => scrambleCell(cell, line, 0), ri * 60);
+  });
+}
+
+// ─── INITIAL REVEAL ─────────────────────────────────────────
+async function initialReveal() {
+  // Start all tiles random
+  document.querySelectorAll('.flap span').forEach(s => {
+    s.textContent = CHARS[Math.floor(Math.random() * CHARS.length)];
+  });
+
+  await new Promise(r => setTimeout(r, 300));
+  await showState(0);
+}
+
+// ─── CYCLE ──────────────────────────────────────────────────
+async function cycle() {
+  currentState = (currentState + 1) % STATES.length;
+  if (currentState === 3) {
+    await showOrangeState();
+  } else {
+    showState(currentState);
+  }
+}
+
+// ─── CLOCK ──────────────────────────────────────────────────
+function tick() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  document.getElementById('clock').textContent =
+    `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+}
+
+// ─── BOOT ───────────────────────────────────────────────────
+buildBoard();
+tick();
+setInterval(tick, 1000);
+
+window.addEventListener('load', async () => {
+  await initialReveal();
+  setInterval(cycle, 8000);
+});
+</script>
+</body>
+</html>
